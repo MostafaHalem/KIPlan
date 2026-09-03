@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="dashboard_page" name="Kandil Planning Dashboard">
+        <t t-call="web.layout">
+            <t t-set="head">
+                <title>Kandil Planning</title>
+                <link rel="stylesheet" href="/kandil_planning_dashboard/static/src/styles.css"/>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"/>
+            </t>
+            <t t-raw="0"/>
+        </t>
+    </template>
+
+    <menuitem id="menu_kandil_planning_root"
+              name="Planning Dashboard"
+              web_icon="fa-industry,#0b1220"
+              sequence="8"/>
+    <record id="action_kandil_planning" model="ir.actions.act_url">
+        <field name="name">Live Planning Dashboard</field>
+        <field name="url">/kandil/planning/app</field>
+        <field name="target">self</field>
+    </record>
+    <menuitem id="menu_kandil_planning_open"
+              name="Open dashboard"
+              parent="menu_kandil_planning_root"
+              action="action_kandil_planning"
+              sequence="1"/>
+</odoo>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kandil Production Planning</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/kandil_planning_dashboard/static/src/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">KG</div>
+        <div>
+          <div class="brand-name">Kandil Planning</div>
+          <div class="brand-sub">Production · Sales Orders</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <button class="nav-btn active" data-view="overview">Overview</button>
+        <button class="nav-btn" data-view="orders">Sales Orders</button>
+        <button class="nav-btn" data-view="search">SO Search</button>
+        <button class="nav-btn" data-view="machines">Machine Status</button>
+        <button class="nav-btn" data-view="factory">Factory Load</button>
+        <button class="nav-btn" data-view="materials">Materials</button>
+        <button class="nav-btn" data-view="outsourcing">Outsourcing</button>
+        <button class="nav-btn" data-view="clients">Suez &amp; Glass</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="metaStamp" class="meta-stamp"></div>
+        <div class="meta-note">Live from Odoo · auto-refresh 5 min</div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+        <div>
+          <h1 id="viewTitle">Overview</h1>
+          <p class="view-sub" id="viewSub">Live planning picture across KI, Mekano, Vertica and Makinat.</p>
+        </div>
+        <div class="top-actions">
+          <label class="toggle">
+            <input type="checkbox" id="eligibleOnly" checked />
+            <span>Planning SOs only</span>
+          </label>
+          <button class="ghost" id="resetFilters">Reset filters</button>
+        </div>
+      </header>
+
+      <section class="filters" id="filters">
+        <div class="filter">
+          <label>Company</label>
+          <select id="fCompany"><option value="">All</option></select>
+        </div>
+        <div class="filter">
+          <label>Customer</label>
+          <select id="fCustomer"><option value="">All</option></select>
+        </div>
+        <div class="filter">
+          <label>Delivery</label>
+          <select id="fDelivery"><option value="">All</option></select>
+        </div>
+        <div class="filter">
+          <label>Category</label>
+          <select id="fCategory"><option value="">All</option></select>
+        </div>
+        <div class="filter">
+          <label>Factory</label>
+          <select id="fFactory"><option value="">All</option></select>
+        </div>
+        <div class="filter">
+          <label>WO Status</label>
+          <select id="fWoStatus"><option value="">All active</option></select>
+        </div>
+        <div class="filter grow">
+          <label>Search SO / product / machine</label>
+          <input id="fSearch" type="search" placeholder="S02162, mold, CNC…" />
+        </div>
+      </section>
+
+      <main class="content">
+        <!-- OVERVIEW -->
+        <section class="view" id="view-overview">
+          <div class="kpi-grid" id="kpiGrid"></div>
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>Delivery mix</h2><span class="hint">Filtered sales orders</span></header>
+              <div class="chart-wrap"><canvas id="chDelivery"></canvas></div>
+            </article>
+            <article class="card">
+              <header><h2>Open quantity by company</h2><span class="hint">Producing plant</span></header>
+              <div class="chart-wrap"><canvas id="chCompany"></canvas></div>
+            </article>
+          </div>
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>Remaining planned hours</h2><span class="hint">Active work orders</span></header>
+              <div class="chart-wrap"><canvas id="chHours"></canvas></div>
+            </article>
+            <article class="card">
+              <header><h2>MO pipeline</h2><span class="hint">Non-finished manufacturing orders</span></header>
+              <div class="chart-wrap"><canvas id="chMo"></canvas></div>
+            </article>
+          </div>
+          <article class="card">
+            <header><h2>Hot sales orders</h2><span class="hint">Highest remaining hours + late MOs</span></header>
+            <div class="table-wrap" id="hotOrders"></div>
+          </article>
+        </section>
+
+        <!-- ORDERS -->
+        <section class="view hidden" id="view-orders">
+          <div class="kpi-grid" id="orderKpis"></div>
+          <article class="card">
+            <header>
+              <h2>Sales order register</h2>
+              <span class="hint" id="orderCount"></span>
+            </header>
+            <div class="table-wrap" id="orderTable"></div>
+          </article>
+        </section>
+
+        <!-- SEARCH -->
+        <section class="view hidden" id="view-search">
+          <article class="card search-card">
+            <header><h2>Sales order search &amp; progress</h2></header>
+            <div class="search-row">
+              <input id="soInput" list="soList" placeholder="Type or choose a sales order…" />
+              <datalist id="soList"></datalist>
+              <button class="primary" id="soGo">Open</button>
+            </div>
+            <p class="hint">Matches the Excel SO Search monitor: identity, delivery, MO progress, work orders and materials.</p>
+          </article>
+          <div id="soDetail"></div>
+        </section>
+
+        <!-- MACHINES -->
+        <section class="view hidden" id="view-machines">
+          <div class="kpi-grid" id="machineKpis"></div>
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>Machine status mix</h2></header>
+              <div class="chart-wrap"><canvas id="chMcStatus"></canvas></div>
+            </article>
+            <article class="card">
+              <header><h2>Hours by machine group</h2></header>
+              <div class="chart-wrap tall"><canvas id="chMcGroup"></canvas></div>
+            </article>
+          </div>
+          <article class="card">
+            <header><h2>Current work priority</h2><span class="hint">Highest available status per machine: In Progress → Ready → Waiting</span></header>
+            <div class="table-wrap" id="machineTable"></div>
+          </article>
+        </section>
+
+        <!-- FACTORY -->
+        <section class="view hidden" id="view-factory">
+          <div class="seg" id="factorySeg"></div>
+          <div class="kpi-grid" id="factoryKpis"></div>
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>Demand vs daily capacity</h2><span class="hint">Working days of load</span></header>
+              <div class="chart-wrap tall"><canvas id="chCapacity"></canvas></div>
+            </article>
+            <article class="card">
+              <header><h2>Open sales orders</h2></header>
+              <div class="table-wrap" id="factoryOpenSO"></div>
+            </article>
+          </div>
+          <article class="card">
+            <header><h2>Machine priority — selected factory</h2></header>
+            <div class="table-wrap" id="factoryMachines"></div>
+          </article>
+        </section>
+
+        <!-- MATERIALS -->
+        <section class="view hidden" id="view-materials">
+          <div class="seg" id="matSeg"></div>
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>Draft MO materials</h2></header>
+              <div class="table-wrap" id="draftMats"></div>
+            </article>
+            <article class="card">
+              <header><h2>Raw material availability</h2><span class="hint">C45 · SS431 · SS431 APXV</span></header>
+              <div class="table-wrap" id="rmAvail"></div>
+            </article>
+          </div>
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>RM movement — current week</h2><span class="hint" id="wkCurrent"></span></header>
+              <div class="table-wrap" id="rmCurr"></div>
+            </article>
+            <article class="card">
+              <header><h2>RM movement — previous week</h2><span class="hint" id="wkPrev"></span></header>
+              <div class="table-wrap" id="rmPrev"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- OUTSOURCING -->
+        <section class="view hidden" id="view-outsourcing">
+          <div class="kpi-grid" id="outKpis"></div>
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>Outsourcing hours by type</h2></header>
+              <div class="chart-wrap"><canvas id="chOut"></canvas></div>
+            </article>
+            <article class="card">
+              <header><h2>Active outsourced operations</h2></header>
+              <div class="table-wrap" id="outTable"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- CLIENTS -->
+        <section class="view hidden" id="view-clients">
+          <div class="grid-2">
+            <article class="card">
+              <header><h2>Kandil Glass Suez</h2></header>
+              <div class="table-wrap" id="suezTable"></div>
+            </article>
+            <article class="card">
+              <header><h2>Kandil Glass</h2></header>
+              <div class="table-wrap" id="glassTable"></div>
+            </article>
+          </div>
+          <article class="card">
+            <header><h2>Matching sales orders in the register</h2></header>
+            <div class="table-wrap" id="clientOrders"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div class="backdrop" id="backdrop"></div>
+  <script src="/kandil_planning_dashboard/static/src/odoo_live.js"></script>
+  <script src="/kandil_planning_dashboard/static/src/app.js"></script>
+</body>
+</html>
